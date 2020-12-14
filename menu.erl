@@ -12,7 +12,7 @@ komunikatLine() ->      17.
 errorLine() ->          18.
 wodaLine()->            20.
 kawaLine()->            22.
-mlekoLine()->        24.
+mlekoLine()->           24.
 stanProduktowLine() ->  26.
 finishLine() ->         29.
 %---STALE END
@@ -379,7 +379,7 @@ print({gotoxy,X,Y}) ->
 print({printxy,X,Y,Msg}) ->
    io:format("\e[~p;~pH~p",[Y,X,Msg]);   
 print({clear}) ->
-   io:format("\e[2J",[]);
+   io:format("\ec",[]);
 print({tlo}) ->
    print({printxy,2,4,1.2343}),  
    io:format("a",[])  .

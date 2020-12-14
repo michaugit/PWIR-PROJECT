@@ -1,0 +1,1 @@
+cd("c:/users/resta/desktop/studia/semestr v weaiiib/pwir/laboratoria/pwir_projekt").
