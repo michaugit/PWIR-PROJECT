@@ -1,0 +1,30 @@
+    
+                        >--------(MENU)--------<
+                        _________________________
+                        | mala czarna kawa - 1. |
+                        | duza czarna kawa - 2. |
+                        | mala biala kawa  - 3. |
+                        | duza biala kawa  - 4. |
+                        | latte            - 5. |
+                        | capuchino        - 6. |
+                        | espresso         - 7. |
+                        | herbata          - 8. |
+                        | kakao            - 9. |
+                        _________________________
+
+Wybierz numer napoju: 1   
+    
+Komunikat: "Prosze czekac, przetwarzanie polecenia"
+    
+
+Woda:  oooooooooo    
+
+Kawa:  ----------    
+
+Mleko: gotowe    
+
+Stan:  {1850,990,2000,50,500}    
+
+Komunikat: "Napoj gotowy do odbioru! Dziekujemy za skorzystanie z naszych uslug"
+37>  
+

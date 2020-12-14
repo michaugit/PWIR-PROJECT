@@ -1,0 +1,68 @@
+PWiR
+Opis projektu
+Program realizujący automat z ciepłymi napojami. Program składa się z 3 oddzielnyc wątków. Pierwszy z nich to ekran użytkownika umożliwiający poruszanie się po prostym menu wraz z wyborem napoju oraz wyświetlaniem postępu przygotowania napoju. Drugi proces to "jednostka centralna" która rozdysponowywyje zdania takie jak dla danego napoju sprawdzić czy są wystarczające zasoby fizyczne ( jeśli nie zwraca odpowiedni błąd), wysyła żądanie przygotowania napoju do "jednostki wytwórczej".
+
+Inne:
+cukier?
+moc kawy?
+
+
+data flow:
+1. wyświetl menu
+1.5 Wprowadz hajs? $$$$
+2. wybierz napój
+3. wyswietl progress bar
+4. wyślij do jednoistki centralnej zapytanie o napój
+5. wyślij zapytanie do magazynu o konkretną ilość składników
+5a. Magazyn sprawdza ( z pliku ) dostępność składników na nadny napój
+5b. jeśli jest ich wystarczjąco zwraca TRUE
+5c. jeśli nie zwraca komunikat o braku wystarczającej ilości
+6. wyślij żądanie do jednostki wytwórczej o produkcję napoju
+7. Produkcja napoju trwa określoną ilość czasu dla każdego napoju
+8. powrót do jednostki centralnej
+9. powrót do menu z komunikatem gotowe
+-> 1.
+
+
+****MENU****
+mała czarna kawa - 1.
+duza czarna kawa - 2.
+mała biała kawa  - 3.
+duza biała kawa  - 4.
+latte            - 5.
+capuchino        - 6.
+espresso         - 7.
+herbata          - 8.
+kakao            - 9.
+Wybierz numer napoju: __ <- 1 - 9 klawisze
+Ilość cukru: _ (0, 1, 2, 3) <- strzałki <- tego nie ma na razie
+Komunikat: _____ (In progress, Error, Done) <- są trochę inne 
+
+<Nazwa, Ml wody, Gramy kawy, ml mleka, isHerbata, Gramy Kakao>
+
+<MC, 150, 10, 0, 0, 0>
+<DC, 300, 25, 0, 0, 0>
+<MB, 100, 10, 80, 0, 0>
+<DB, 170, 25, 150, 0, 0>
+<LT, 60, 20, 200, 0, 0>
+<CP, 70, 25, 100, 0, 0>
+<ES, 50, 40, 0, 0, 0>
+<HR, 250, 0, 0, 1, 0>
+<KO, 0, 0, 250, 0, 15>
+
+
+Magazyn
+{
+	"woda":2000,
+	"kawa": 1000,
+	"mleko": 2000,
+	"herbata": 50,
+	"kakao": 500,
+	"cukier": 500
+}
+
+
+
+
+
+
