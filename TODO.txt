@@ -1,0 +1,121 @@
+Nazwa pliku: CoffeeMachine
+
+-funkcja start() 
+	computer -> jednostka centralna 
+	display -> monitor
+	waterheater -> czajnik
+	monitor -> barista 
+	milkheater -> podgrzewacz do mleka
+	coffeegrinder -> młynek do kawy
+	products -> magazyn
+	mixer -> mikser
+	paymentterminal -> do płacenia
+
+
+
+Sposób działania:
+1. Zespawnowanie procesów
+2.
+
+computer (initialize) -> 
+	products (initalize ) ->
+		return  computer(productsok)
+
+computer (products_ok) -> 
+	paymentterminal (initialize) ->
+		return computer (paymentterminalok)
+
+computer (payment_terminal_ok) ->
+	display (display_menu) ->
+		- wyświetlić menu 
+		- pobrać hajs
+		- wybrać napój 
+		return computer (money, drink_type)
+
+computer (money, drink_type) ->
+	OPCJONALNIE sprawdzenie czy poprawny drink_type i pieniadze (narazie przyjmujemy że podajemy dobre wartosci)
+	products(drink_type, money) ->
+		sprawdza czy można zrobić dany produkt
+		# jest ok then return computer(products_enough, drink_type, money)
+		# nie ma czegoś then return computer(products_lack, money)
+
+computer (products_lack, money) ->
+	payment_terminal(return_money, money)->
+		-wprintowanie "#zwracam pieniądze#"
+	display (products_lack)->
+		-wyświetli komunikat o braku produktów i że pieniądze zostały zwrócone
+		-odczekanie jakiegoś czasu
+		return display(display_menu)
+
+computer (products_enough, drink_type, money) ->
+	payment_terminal (money, drink_type) ->
+		- obsługe:
+			#wydaje reszte "Zwracam xx pln"
+			return computer(payment_ok, drink_type)
+
+computer (payment_ok, drink_type) ->
+	display(string, line, "xyz"):
+	-woda
+	-kawa
+	-mleko
+	-mikser
+	products(get, drink_type) ->
+		-update stanu produktów
+	
+	waterheater(heat_water, amount)
+	milkheater(heat_milk, amount)
+	coffeegrinder(grinde_coffee, amount)
+	
+waterheater(heat_water, amount) ->
+	progresbar(...) (jeśli potrzebny)
+	computer(water_heated)
+
+
+milkheater(heat_milk, amount)->
+	progresbar(...) (jeśli potrzebny)
+	computer(milk_heated)
+
+coffeegrinder(grinde_coffee, amount)
+	progresbar(...) (jeśli potrzebny)
+	computer(coffee_grinded)
+	
+computer (water_heated / milk_heated / coffee_grinded)
+	monitor(water_heated / milk_heated / coffee_grinded)
+
+monitor(water_heated / milk_heated / coffee_grinded) 
+	|poczeka aż wszystko będzie gotowe|
+	mixer(mix)
+		
+mixer(mix)->
+	-miksuje
+	computer(drink_ready)
+
+computer(drink_ready)
+	display(drink_ready)
+	odczekanie ...
+	display(display_menu)
+
+
+NAPOJE:
+	mała czarna kawa
+	-||- z mlekiem
+	duża czarna kawa
+	-||- z mlekiem
+	kakao
+	
+		
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
