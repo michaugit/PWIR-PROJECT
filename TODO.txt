@@ -55,10 +55,10 @@ computer(money_returned, money, drink_type)	DONE
 		-odczekanie jakiegoś czasu
 		return display(display_menu) DONE
 
-computer (products_lack, money) ->
-	payment_terminal(return_money, money)->
+computer (products_lack, money) -> DONE
+	payment_terminal(return_money, money)->DONE
 		-wprintowanie "#zwracam pieniądze#"
-	display (products_lack)->
+	display (products_lack)-> DONE
 		-wyświetli komunikat o braku produktów i że pieniądze zostały zwrócone
 		-odczekanie jakiegoś czasu
 		return display(display_menu)
@@ -66,17 +66,17 @@ computer (products_lack, money) ->
 computer (products_enough, drink_type, money) -> DONE
 	payment_terminal (money, drink_type) ->
 		- obsługe:
-			#wydaje reszte "Zwracam xx pln"
+			#wydaje reszte "Zwracam xx pln" DONE
 			return computer(payment_ok, drink_type)
 
-computer (payment_ok, drink_type) ->
+computer (payment_ok, drink_type) -> DONE
 	display(string, line, "xyz"):
-	-woda
-	-kawa
-	-mleko
-	-mikser
-	products(get, drink_type) ->
-		-update stanu produktów
+	-woda DONE
+	-kawa DONE
+	-mleko DONE
+	-mikser DONE
+	products(get, drink_type) ->DONE
+		-update stanu produktów DONE
 	
 	waterheater(heat_water, amount)
 	milkheater(heat_milk, amount)

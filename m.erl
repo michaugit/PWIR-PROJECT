@@ -4,19 +4,22 @@
 -compile([export_all]).
 
 % menu wyswielane klientowi
-displayMenu() ->
+displayMenu(CurrentState) ->
     print({gotoxy, 1, 1}),
     io:format("
-            >--------(MENU NAPOJOW)--------<
-            ________________________________
-            | 1. mala czarna kawa    | 2zl |
-            | 2. mala kawa z mlekiem | 3zl |
-            | 3. duza czarna kawa    | 3zl |
-            | 4. duza kawa z mlekiem | 4zl |
-            | 5. kakao               | 4zl |
-            ________________________________
+    ===== COFFEE MACHINE MENU  =====
+    ================================
+    | 1. mala czarna kawa    | 2zl |
+    | 2. mala kawa z mlekiem | 3zl |
+    | 3. duza czarna kawa    | 3zl |
+    | 4. duza kawa z mlekiem | 4zl |
+    | 5. kakao               | 4zl |
+    ================================
 
-Wprowadz pieniadze do automatu: ").
+Obecny stan produktow: ~p
+__________________________________________
+
+Wprowadz pieniadze do automatu: ",[CurrentState]).
 
 % Magazyn produktow
 % woda, kawa, mleko, kakao
@@ -36,9 +39,9 @@ requiredProducts(DrinkNum) ->
 % no display
 display() ->
     receive
-        {CID, display_menu} ->
+        {CID, display_menu, CurrentState} ->
             print({clear}),
-            displayMenu(),
+            displayMenu(CurrentState),
             Money = io:get_chars("", 1),
 
             if Money == "q" -> %w celu testów do szybkiego wychodzenia z programu
@@ -46,15 +49,21 @@ display() ->
                 true ->
                     io:format("Wybierz napoj: "),
                     DrinkType = io:get_chars("", 1),
-                    CID!{Money, DrinkType},
+                    io:format("__________________________________________~n~n"),
+                    CID!{choice, Money, DrinkType},
                     display()
             end;
-        {CID, command, Message} ->
-            io:format("\e[~p;~pHKOMUNIKAT: ~ts~n", [25, 0, Message]),
+        {command, Message} ->
+            io:format("\e[~p;~pHKOMUNIKAT: ~ts~n", [29, 0, Message]),
             print({gotoxy, 0, 30}),
-            timer:sleep(5000),
-            self()!{CID, display_menu},
+            % timer:sleep(5000),
+            % % self()!{CID, display_menu},
+            display();
+        {string, Line, Message} ->
+            io:format("\e[~p;~pH~ts", [Line, 5, Message]),
+            print({gotoxy, 0, 30}),
             display()
+
     end.
 
 % komputer
@@ -67,28 +76,63 @@ computer(DisplayID, ProductsID, PaymentID) ->
             PaymentID!{self(), initialize},
             computer(DisplayID, ProductsID, PaymentID);
         {paymentTerminalOk} ->
-            DisplayID!{self(), display_menu},
+            self()!{print_menu},
             computer(DisplayID, ProductsID, PaymentID);
-        {Money, DrinkType} ->
+        {print_menu} ->
+            ProductsID!{self(), get_current_state},
+                receive
+                    {current_state, State} ->
+                        CurrentState = State
+                end,
+            DisplayID!{self(), display_menu, CurrentState},
+            computer(DisplayID, ProductsID, PaymentID);
+        {choice, Money, DrinkType} ->
             PaymentID!{self(), isEnough, Money, DrinkType},
             computer(DisplayID, ProductsID, PaymentID);
         {moneyEnough, MoneyInt, DrinkTypeInt} ->
-            ProductsID!{self(), MoneyInt, DrinkTypeInt},
+            ProductsID!{self(), isEnough, MoneyInt, DrinkTypeInt},
+            computer(DisplayID, ProductsID, PaymentID);
+        {productsEnough, MoneyInt, DrinkTypeInt} ->
+            PaymentID!{self(), return_rest, MoneyInt, DrinkTypeInt},
+            computer(DisplayID, ProductsID, PaymentID);
+        {payment_ok, DrinkTypeInt} ->
+            io:format("Trwa przygotowywanie napoju...~n~n"),
+            ProductsID!{self(), get, DrinkTypeInt},
+            receive
+                {products_got} ->
+                    % 18 woda, 19 kawa , 20 mleko, 22 mikser, 
+                    DisplayID!{string, 22, "woda: "},
+                    DisplayID!{string, 23, "kawa: "},
+                    DisplayID!{string, 24, "mleko: "},
+                    DisplayID!{string, 26, "mikser: "},
+
+                    % to się wykona jak wszystko zostanie wykonane
+                    DisplayID!{command, "Napój gotowy :) Dziękujemy!"},
+                    timer:sleep(5000),
+                    self()!{print_menu}
+            end,
+
             computer(DisplayID, ProductsID, PaymentID);
 
         {moneyNotEnough, MoneyInt, DrinkTypeInt} ->
             PaymentID!{self(), return_money, MoneyInt, DrinkTypeInt},
-            computer(DisplayID, ProductsID, PaymentID);
-        {money_returned, MoneyInt, DrinkTypeInt} ->
-            DisplayID!{self(), command, "Nie wystarczająca liczba pieniędzy na zakup wybranego produktu! Pieniadze zostaly zwrocone!"},
+            receive
+                {money_returned, MoneyInt, DrinkTypeInt} ->
+                    DisplayID!{command, "Nie wystarczająca liczba pieniędzy na zakup wybranego produktu! Pieniadze zostaly zwrocone!"},
+                    timer:sleep(5000),
+                    self()!{print_menu}
+            end,
             computer(DisplayID, ProductsID, PaymentID);
 
-        {productsEnough, MoneyInt, DrinkTypeInt} ->
-            io:format("No to robiony bedzie napoj tak oo"),
-            timer:sleep(2000),
-            self()!{initialize},
+        {products_lack, MoneyInt, DrinkTypeInt} ->
+            PaymentID!{self(), return_money, MoneyInt, DrinkTypeInt},
+            receive
+                {money_returned, MoneyInt, DrinkTypeInt} ->
+                    DisplayID!{command, "Nie wystarczająca ilość produktów w maszynie :( Pieniadze zostaly zwrocone!"},
+                    timer:sleep(5000),
+                    self()!{print_menu}
+            end,
             computer(DisplayID, ProductsID, PaymentID)
-
     end.
 
 paymentTerminal() ->
@@ -107,7 +151,14 @@ paymentTerminal() ->
             true ->
                 CID!{moneyNotEnough, MoneyInt, DrinkTypeInt}
             end,
+            paymentTerminal();
 
+        {CID, return_rest, MoneyInt, DrinkTypeInt} ->
+            ProductsNeeded = requiredProducts(DrinkTypeInt),
+            MoneyNeeded = element(5, ProductsNeeded),
+            Rest = MoneyInt - MoneyNeeded,
+            io:format("paymentTerminal -> #ZWRACAM RESZTE: ~pzl#~n", [Rest]),
+            CID!{payment_ok, DrinkTypeInt},
             paymentTerminal();
 
         {CID, return_money, MoneyInt, DrinkTypeInt} ->
@@ -124,9 +175,11 @@ products(ProductsLeft) ->
     receive
         {CID, initialize} ->
             CID!{productsOk},
-            products({Water, Coffee, Milk, Cocoa});
-        {CID, MoneyInt, DrinkTypeInt} ->
-            CurrentProducts = productsAtStart(),
+            products(ProductsLeft);
+        {CID, get_current_state} ->
+            CID!{current_state, ProductsLeft},
+            products(ProductsLeft);    
+        {CID, isEnough, MoneyInt, DrinkTypeInt} ->
             RequiredProducts = requiredProducts(DrinkTypeInt),
             ReqWater = element(1, RequiredProducts),
             ReqCoffee = element(2, RequiredProducts),
@@ -138,29 +191,58 @@ products(ProductsLeft) ->
             MilkLeft = Milk - ReqMilk,
             CocoaLeft = Cocoa - ReqCocoa,
 
-            % TUDU:
-            % w kazdym casie true trzeba bedzie zmienic na CID!{productsLack, MoneyInt}
+
             case WaterLeft < 0 of
                 false -> null;
-                true -> CID!{initialize}, io:format("Nie ma wody ~n"), timer:sleep(2000), products({Water, Coffee, Milk, Cocoa})
+                true -> 
+                    CID!{products_lack, MoneyInt, DrinkTypeInt}, 
+                    io:format("Nie ma wody ~n"), 
+                    timer:sleep(2000), 
+                    products({Water, Coffee, Milk, Cocoa})
             end,
 
             case CoffeeLeft < 0 of
                 false -> null;
-                true -> CID!{initialize}, io:format("Nie ma kawy ~n"), timer:sleep(2000), products({Water, Coffee, Milk, Cocoa})
+                true -> 
+                    CID!{products_lack, MoneyInt, DrinkTypeInt}, 
+                    io:format("Nie ma kawy ~n"), 
+                    timer:sleep(2000), 
+                    products({Water, Coffee, Milk, Cocoa})
             end,
 
             case MilkLeft < 0 of
                 false -> null;
-                true -> CID!{initialize}, io:format("Nie ma mleka ~n"), timer:sleep(2000), products({Water, Coffee, Milk, Cocoa})
+                true ->  
+                    CID!{products_lack, MoneyInt, DrinkTypeInt}, 
+                    io:format("Nie ma mleka ~n"), 
+                    timer:sleep(2000), 
+                    products({Water, Coffee, Milk, Cocoa})
             end,
 
             case CocoaLeft < 0 of
                 false -> null;
-                true -> CID!{initialize}, io:format("Nie ma kakao ~n"), timer:sleep(2000), products({Water, Coffee, Milk, Cocoa})
+                true -> 
+                    CID!{products_lack, MoneyInt, DrinkTypeInt}, 
+                    io:format("Nie ma kakao ~n"), 
+                    timer:sleep(2000), 
+                    products({Water, Coffee, Milk, Cocoa})
             end,
 
             CID!{productsEnough, MoneyInt, DrinkTypeInt},
+            products(ProductsLeft);
+
+        {CID, get, DrinkTypeInt} ->
+            RequiredProducts = requiredProducts(DrinkTypeInt),
+            ReqWater = element(1, RequiredProducts),
+            ReqCoffee = element(2, RequiredProducts),
+            ReqMilk = element(3, RequiredProducts),
+            ReqCocoa = element(4, RequiredProducts),
+
+            WaterLeft = Water - ReqWater,
+            CoffeeLeft = Coffee - ReqCoffee,
+            MilkLeft = Milk - ReqMilk,
+            CocoaLeft = Cocoa - ReqCocoa,
+            CID!{products_got},
             products({WaterLeft, CoffeeLeft, MilkLeft, CocoaLeft})
 
     end.
