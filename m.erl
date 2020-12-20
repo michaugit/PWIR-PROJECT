@@ -1,5 +1,6 @@
 
--module(coffeeMachine).
+% -module(coffeeMachine).
+-module(m).
 -compile([export_all]).
 
 % menu wyswielane klientowi
@@ -39,9 +40,20 @@ display() ->
             print({clear}),
             displayMenu(),
             Money = io:get_chars("", 1),
-            io:format("Wybierz napoj: "),
-            DrinkType = io:get_chars("", 1),
-            CID!{Money, DrinkType},
+
+            if Money == "q" -> %w celu testów do szybkiego wychodzenia z programu
+                    io:format("KONIEC~n");
+                true ->
+                    io:format("Wybierz napoj: "),
+                    DrinkType = io:get_chars("", 1),
+                    CID!{Money, DrinkType},
+                    display()
+            end;
+        {CID, command, Message} ->
+            io:format("\e[~p;~pHKOMUNIKAT: ~ts~n", [25, 0, Message]),
+            print({gotoxy, 0, 30}),
+            timer:sleep(5000),
+            self()!{CID, display_menu},
             display()
     end.
 
@@ -63,13 +75,19 @@ computer(DisplayID, ProductsID, PaymentID) ->
         {moneyEnough, MoneyInt, DrinkTypeInt} ->
             ProductsID!{self(), MoneyInt, DrinkTypeInt},
             computer(DisplayID, ProductsID, PaymentID);
+
+        {moneyNotEnough, MoneyInt, DrinkTypeInt} ->
+            PaymentID!{self(), return_money, MoneyInt, DrinkTypeInt},
+            computer(DisplayID, ProductsID, PaymentID);
+        {money_returned, MoneyInt, DrinkTypeInt} ->
+            DisplayID!{self(), command, "Nie wystarczająca liczba pieniędzy na zakup wybranego produktu! Pieniadze zostaly zwrocone!"},
+            computer(DisplayID, ProductsID, PaymentID);
+
         {productsEnough, MoneyInt, DrinkTypeInt} ->
             io:format("No to robiony bedzie napoj tak oo"),
             timer:sleep(2000),
             self()!{initialize},
             computer(DisplayID, ProductsID, PaymentID)
-
-
 
     end.
 
@@ -87,11 +105,15 @@ paymentTerminal() ->
             if MoneyInt >= MoneyNeeded ->
                 CID!{moneyEnough, MoneyInt, DrinkTypeInt};
             true ->
-                CID!{initialize}
+                CID!{moneyNotEnough, MoneyInt, DrinkTypeInt}
             end,
 
-            paymentTerminal()
+            paymentTerminal();
 
+        {CID, return_money, MoneyInt, DrinkTypeInt} ->
+            io:format("~n~n~n~npaymentTerminal -> #ZWRACAM PIENIADZE#~n~n"),
+            CID!{money_returned, MoneyInt, DrinkTypeInt},
+            paymentTerminal()
     end.
 
 products(ProductsLeft) ->
@@ -151,16 +173,12 @@ start() ->
     ComputerID!{initialize}.
 
 
-% Funkcje pomocnicze
+% Funkcje pomocnicze 
 print({gotoxy,X,Y}) ->
    io:format("\e[~p;~pH",[Y,X]);
 print({printxy,X,Y,Msg}) ->
    io:format("\e[~p;~pH~p",[Y,X,Msg]);
 print({clear}) ->
-   io:format("\ec",[]);
-print({tlo}) ->
-   print({printxy,2,4,1.2343}),
-   io:format("a",[])  .
-
+   io:format("\ec",[]).
 printxy({X,Y,Msg}) ->
    io:format("\e[~p;~pH~p~n",[Y,X,Msg]).

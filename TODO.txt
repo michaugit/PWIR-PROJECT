@@ -36,12 +36,24 @@ computer (money, drink_type) -> DONE
 	OPCJONALNIE sprawdzenie czy poprawny drink_type i pieniadze (narazie przyjmujemy że podajemy dobre wartosci)
 	payment_terminal(isEnough, money, drink_type) -> DONE
 		#jezeli ok then return computer(moneyEnough, money, drink_type)
+		#jeżeli za mało zwróć hajs i return computer(moneyNotEnough, money drink_type) DONE
 	
 computer (moneyEnough, money, drink_type) -> DONE
 	products(drink_type, money) ->
 		sprawdza czy można zrobić dany produkt
 		# jest ok then return computer(products_enough, drink_type, money) DONE
-		# nie ma czegoś then return computer(products_lack, money) 
+		# nie ma czegoś then return computer(products_lack, money)
+
+computer(moneyNotEnough, money, drink type) -> DONE
+	payment_terminal(return_money, money) -> DONE
+		-"Zwracam pieniądze" DONE
+		return computer(money_returned, money, drink_type) DONE
+
+computer(money_returned, money, drink_type)	DONE	
+	display(command, message)-> DONE
+		-wyświetlenie komunikatu o niewystarczającej liczbie pieniędzy i że pieniądze zostały zwrócone
+		-odczekanie jakiegoś czasu
+		return display(display_menu) DONE
 
 computer (products_lack, money) ->
 	payment_terminal(return_money, money)->

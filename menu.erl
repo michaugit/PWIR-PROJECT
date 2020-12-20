@@ -37,8 +37,8 @@ getIngredients(Num) ->
 
 % Poczatkowy stan automatu
 % woda, kawa, mleko, herbata, kakao
-getInitialMachineResources() -> {2000, 1000, 2000, 50, 500}.
-
+% getInitialMachineResources() -> {2000, 1000, 2000, 50, 500}.
+getInitialMachineResources() -> {0, 0, 0, 0, 0}.
 %wypisz menu
 printMenu() ->
     %print({clear}),
