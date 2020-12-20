@@ -1,7 +1,7 @@
 Nazwa pliku: CoffeeMachine
 
 -funkcja start() 
-	computer -> jednostka centralna 
+	computer -> jednostka centralna
 	display -> monitor
 	waterheater -> czajnik
 	monitor -> barista 
@@ -17,27 +17,31 @@ Sposób działania:
 1. Zespawnowanie procesów
 2.
 
-computer (initialize) -> 
+computer (initialize) ->  DONE
 	products (initalize ) ->
 		return  computer(productsok)
 
-computer (products_ok) -> 
+computer (products_ok) ->  DONE
 	paymentterminal (initialize) ->
 		return computer (paymentterminalok)
 
-computer (payment_terminal_ok) ->
-	display (display_menu) ->
+computer (payment_terminal_ok) -> DONE
+	display (display_menu) -> DONE
 		- wyświetlić menu 
 		- pobrać hajs
 		- wybrać napój 
 		return computer (money, drink_type)
 
-computer (money, drink_type) ->
+computer (money, drink_type) -> DONE
 	OPCJONALNIE sprawdzenie czy poprawny drink_type i pieniadze (narazie przyjmujemy że podajemy dobre wartosci)
+	payment_terminal(isEnough, money, drink_type) -> DONE
+		#jezeli ok then return computer(moneyEnough, money, drink_type)
+	
+computer (moneyEnough, money, drink_type) -> DONE
 	products(drink_type, money) ->
 		sprawdza czy można zrobić dany produkt
-		# jest ok then return computer(products_enough, drink_type, money)
-		# nie ma czegoś then return computer(products_lack, money)
+		# jest ok then return computer(products_enough, drink_type, money) DONE
+		# nie ma czegoś then return computer(products_lack, money) 
 
 computer (products_lack, money) ->
 	payment_terminal(return_money, money)->
@@ -47,7 +51,7 @@ computer (products_lack, money) ->
 		-odczekanie jakiegoś czasu
 		return display(display_menu)
 
-computer (products_enough, drink_type, money) ->
+computer (products_enough, drink_type, money) -> DONE
 	payment_terminal (money, drink_type) ->
 		- obsługe:
 			#wydaje reszte "Zwracam xx pln"
