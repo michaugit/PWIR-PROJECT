@@ -1,6 +1,4 @@
-
-% -module(coffeeMachine).
--module(m).
+-module(coffeeMachine).
 -compile([export_all]).
 
 % menu wyswielane klientowi
@@ -23,29 +21,19 @@ Wprowadz pieniadze do automatu: ",[CurrentState]).
 
 % Magazyn produktow
 % woda, kawa, mleko, kakao
-productsAtStart() -> {1600, 1000, 2000, 100}.
-
-head([H|_])->[H].
-
-% progress
-progressPrinter(_,_,0,{_,_,_}) -> io:format(" ");
-progressPrinter(Id,Czas,Ile,{A,B,C}) ->
-    Id!{A,B,C},
-    timer:sleep(Czas),
-    progressPrinter(Id,Czas,Ile-1,{A,B,C++head(C)}).
+productsAtStart() -> {5, 5, 5, 5}.
 
 % Baza produktow potrzebnych do wytworzenia napojow
 % woda, kawa, mleko, kakao, pieniadze
 requiredProducts(DrinkNum) ->
     element(DrinkNum,{
-    { 150, 15, 0  , 0, 2 },
-    { 100, 15, 90  , 0, 3 },
-    { 170, 30, 0 , 0, 3 },
-    { 120, 30, 120, 0, 4 },
-    { 0  , 0 , 250, 15, 4}
+    { 1, 1, 0, 0, 2 },
+    { 1, 1, 1, 0, 3 },
+    { 2, 2, 0, 0, 3 },
+    { 2, 2, 2, 0, 4 },
+    { 0, 0, 4, 1, 4}
     }).
 
-% no display
 display() ->
     receive
         {CID, display_menu, CurrentState} ->
@@ -62,16 +50,17 @@ display() ->
                     CID!{choice, Money, DrinkType},
                     display()
             end;
+
         {command, Message} ->
             io:format("\e[~p;~pHKOMUNIKAT: ~ts~n", [29, 0, Message]),
             print({gotoxy, 0, 30}),
-            % timer:sleep(5000),
-            % % self()!{CID, display_menu},
             display();
-        {char,Line,Char} ->
-            io:format("\e[~p;~pH ~s", [Line, 13, Char]),
+
+        {update_display, Line, Progress} ->
+            io:format("\e[~p;~pH ~ts", [Line, 13, Progress]),
             print({gotoxy,0,30}),
             display();
+
         {string, Line, Message} ->
             io:format("\e[~p;~pH~ts", [Line, 5, Message]),
             print({gotoxy, 0, 30}),
@@ -80,17 +69,20 @@ display() ->
     end.
 
 % komputer
-computer(DisplayID, ProductsID, PaymentID, WaterHeaterID) ->
+computer(DisplayID, ProductsID, PaymentID, MonitorID, Appliances) ->
     receive
         {initialize} ->
             ProductsID!{self(), initialize},
-            computer(DisplayID, ProductsID, PaymentID, WaterHeaterID);
-        {productsOk} ->
+            computer(DisplayID, ProductsID, PaymentID, MonitorID, Appliances);
+
+        {products_ok} ->
             PaymentID!{self(), initialize},
-            computer(DisplayID, ProductsID, PaymentID, WaterHeaterID);
-        {paymentTerminalOk} ->
+            computer(DisplayID, ProductsID, PaymentID, MonitorID, Appliances);
+
+        {payment_terminal_ok} ->
             self()!{print_menu},
-            computer(DisplayID, ProductsID, PaymentID, WaterHeaterID);
+            computer(DisplayID, ProductsID, PaymentID, MonitorID, Appliances);
+
         {print_menu} ->
             ProductsID!{self(), get_current_state},
                 receive
@@ -98,44 +90,69 @@ computer(DisplayID, ProductsID, PaymentID, WaterHeaterID) ->
                         CurrentState = State
                 end,
             DisplayID!{self(), display_menu, CurrentState},
-            computer(DisplayID, ProductsID, PaymentID, WaterHeaterID);
+            computer(DisplayID, ProductsID, PaymentID, MonitorID, Appliances);
+
         {choice, Money, DrinkType} ->
-            PaymentID!{self(), isEnough, Money, DrinkType},
-            computer(DisplayID, ProductsID, PaymentID, WaterHeaterID);
-        {moneyEnough, MoneyInt, DrinkTypeInt} ->
-            ProductsID!{self(), isEnough, MoneyInt, DrinkTypeInt},
-            computer(DisplayID, ProductsID, PaymentID, WaterHeaterID);
-        {productsEnough, MoneyInt, DrinkTypeInt} ->
+            PaymentID!{self(), is_enough, Money, DrinkType},
+            computer(DisplayID, ProductsID, PaymentID, MonitorID, Appliances);
+
+        {money_enough, MoneyInt, DrinkTypeInt} ->
+            ProductsID!{self(), is_enough, MoneyInt, DrinkTypeInt},
+            computer(DisplayID, ProductsID, PaymentID, MonitorID, Appliances);
+
+        {products_enough, MoneyInt, DrinkTypeInt} ->
             PaymentID!{self(), return_rest, MoneyInt, DrinkTypeInt},
-            computer(DisplayID, ProductsID, PaymentID, WaterHeaterID);
+            computer(DisplayID, ProductsID, PaymentID, MonitorID, Appliances);
+
         {payment_ok, DrinkTypeInt} ->
             io:format("Trwa przygotowywanie napoju...~n~n"),
             ProductsID!{self(), get, DrinkTypeInt},
             receive
-                {products_got, ReqWater, ReqCoffee, ReqMilk, ReqCocoa} ->
-                    % 18 woda, 19 kawa , 20 mleko, 22 mikser,
+                {products_got, ReqWater, ReqCoffee, ReqMilk, _} ->
+                    % 22 woda, 23 kawa , 24 mleko, 26 mikser,
                     DisplayID!{string, 22, "woda: "},
                     DisplayID!{string, 23, "kawa: "},
                     DisplayID!{string, 24, "mleko: "},
                     DisplayID!{string, 26, "mikser: "},
 
-                    WaterHeaterID!{self(), DisplayID, heat_water, ReqWater}
+                    WaterHeaterID = element(1, Appliances),
+                    MilkHeaterID = element(2, Appliances),
+                    CoffeeGrinderID= element(3, Appliances),
 
-                    % to się wykona jak wszystko zostanie wykonane
-                    % DisplayID!{command, "Napój gotowy :) Dziękujemy!"},
-                    % timer:sleep(5000),
-                    % self()!{print_menu}
+                    WaterHeaterID!{self(), MonitorID, heat_water, ReqWater},
+                    MilkHeaterID!{self(), MonitorID, heat_milk, ReqMilk},
+                    CoffeeGrinderID!{self(), MonitorID, grind_coffee, ReqCoffee},
+
+                    MonitorID!{self(), cocoa_poured}
             end,
+            computer(DisplayID, ProductsID, PaymentID, MonitorID, Appliances);
 
-            computer(DisplayID, ProductsID, PaymentID, WaterHeaterID);
+        {update_progress, Line, Progress} ->
+            DisplayID!{update_display, Line, "[" ++ Progress ++ "]"},
+            computer(DisplayID, ProductsID, PaymentID, MonitorID, Appliances);
 
-        {water, heated} ->
+        {unused_product, Line} ->
+            DisplayID!{update_display, Line, "[nie zawiera]"},
+            computer(DisplayID, ProductsID, PaymentID, MonitorID, Appliances);
+
+        {drink_ready_to_mix} ->
+            MixerID = element(4, Appliances),
+            MixerID!{self(), start_mixing},
+            computer(DisplayID, ProductsID, PaymentID, MonitorID, Appliances);
+
+        {drink_is_mixing} ->
+            DisplayID!{update_display, 26, "mieszanie..."},
+             computer(DisplayID, ProductsID, PaymentID, MonitorID, Appliances);
+
+        {drink_ready} ->
+            DisplayID!{update_display, 26, "wymieszane"},
+            timer:sleep(1000),
             DisplayID!{command, "Napój gotowy :) Dziękujemy!"},
             timer:sleep(5000),
             self()!{print_menu},
-            computer(DisplayID, ProductsID, PaymentID, WaterHeaterID);
+            computer(DisplayID, ProductsID, PaymentID, MonitorID, Appliances);
 
-        {moneyNotEnough, MoneyInt, DrinkTypeInt} ->
+        {money_not_enough, MoneyInt, DrinkTypeInt} ->
             PaymentID!{self(), return_money, MoneyInt, DrinkTypeInt},
             receive
                 {money_returned, MoneyInt, DrinkTypeInt} ->
@@ -143,7 +160,7 @@ computer(DisplayID, ProductsID, PaymentID, WaterHeaterID) ->
                     timer:sleep(5000),
                     self()!{print_menu}
             end,
-            computer(DisplayID, ProductsID, PaymentID, WaterHeaterID);
+            computer(DisplayID, ProductsID, PaymentID, MonitorID, Appliances);
 
         {products_lack, MoneyInt, DrinkTypeInt} ->
             PaymentID!{self(), return_money, MoneyInt, DrinkTypeInt},
@@ -153,24 +170,25 @@ computer(DisplayID, ProductsID, PaymentID, WaterHeaterID) ->
                     timer:sleep(5000),
                     self()!{print_menu}
             end,
-            computer(DisplayID, ProductsID, PaymentID, WaterHeaterID)
+            computer(DisplayID, ProductsID, PaymentID, MonitorID, Appliances)
     end.
 
 paymentTerminal() ->
     receive
         {CID, initialize} ->
-            CID!{paymentTerminalOk},
+            CID!{payment_terminal_ok},
             paymentTerminal();
-        {CID, isEnough, Money, DrinkType} ->
+
+        {CID, is_enough, Money, DrinkType} ->
             {MoneyInt,_} = string:to_integer(Money),
             {DrinkTypeInt,_} = string:to_integer(DrinkType),
             ProductsNeeded = requiredProducts(DrinkTypeInt),
             MoneyNeeded = element(5, ProductsNeeded),
 
             if MoneyInt >= MoneyNeeded ->
-                CID!{moneyEnough, MoneyInt, DrinkTypeInt};
+                CID!{money_enough, MoneyInt, DrinkTypeInt};
             true ->
-                CID!{moneyNotEnough, MoneyInt, DrinkTypeInt}
+                CID!{money_not_enough, MoneyInt, DrinkTypeInt}
             end,
             paymentTerminal();
 
@@ -195,12 +213,14 @@ products(ProductsLeft) ->
     Cocoa = element(4, ProductsLeft),
     receive
         {CID, initialize} ->
-            CID!{productsOk},
+            CID!{products_ok},
             products(ProductsLeft);
+
         {CID, get_current_state} ->
             CID!{current_state, ProductsLeft},
             products(ProductsLeft);
-        {CID, isEnough, MoneyInt, DrinkTypeInt} ->
+
+        {CID, is_enough, MoneyInt, DrinkTypeInt} ->
             RequiredProducts = requiredProducts(DrinkTypeInt),
             ReqWater = element(1, RequiredProducts),
             ReqCoffee = element(2, RequiredProducts),
@@ -212,13 +232,10 @@ products(ProductsLeft) ->
             MilkLeft = Milk - ReqMilk,
             CocoaLeft = Cocoa - ReqCocoa,
 
-
             case WaterLeft < 0 of
                 false -> null;
                 true ->
                     CID!{products_lack, MoneyInt, DrinkTypeInt},
-                    io:format("Nie ma wody ~n"),
-                    timer:sleep(2000),
                     products({Water, Coffee, Milk, Cocoa})
             end,
 
@@ -226,8 +243,6 @@ products(ProductsLeft) ->
                 false -> null;
                 true ->
                     CID!{products_lack, MoneyInt, DrinkTypeInt},
-                    io:format("Nie ma kawy ~n"),
-                    timer:sleep(2000),
                     products({Water, Coffee, Milk, Cocoa})
             end,
 
@@ -235,8 +250,6 @@ products(ProductsLeft) ->
                 false -> null;
                 true ->
                     CID!{products_lack, MoneyInt, DrinkTypeInt},
-                    io:format("Nie ma mleka ~n"),
-                    timer:sleep(2000),
                     products({Water, Coffee, Milk, Cocoa})
             end,
 
@@ -244,12 +257,10 @@ products(ProductsLeft) ->
                 false -> null;
                 true ->
                     CID!{products_lack, MoneyInt, DrinkTypeInt},
-                    io:format("Nie ma kakao ~n"),
-                    timer:sleep(2000),
                     products({Water, Coffee, Milk, Cocoa})
             end,
 
-            CID!{productsEnough, MoneyInt, DrinkTypeInt},
+            CID!{products_enough, MoneyInt, DrinkTypeInt},
             products(ProductsLeft);
 
         {CID, get, DrinkTypeInt} ->
@@ -268,33 +279,126 @@ products(ProductsLeft) ->
 
     end.
 
+head([H|_])->[H].
+procesSimulator(_, 0, _, {_, _}) -> null;
+procesSimulator(CID, HowMany, TimeOfSequence, {Line, Progress}) ->
+    CID!{update_progress, Line, Progress},
+    timer:sleep(TimeOfSequence),
+    procesSimulator(CID, HowMany - 1, TimeOfSequence, {Line, Progress ++ head(Progress)}).
+
+
 waterHeater() ->
     receive
-        {CID, DID, heat_water, Amount} ->
-            Parts = round(Amount/25),
-            case Parts of
-                0 -> DID!{string,22,"gotowe"};
-                _ -> progressPrinter(DID,Parts*100,10,{char,22,"="})
+        {CID, MID, heat_water, Amount} ->
+            Times = Amount*5,
+            case Times of
+                0 -> CID!{unused_product, 22};
+                _ -> procesSimulator(CID, Times, 500, {22,"="})
             end,
-            CID!{water, heated},
+            MID!{CID, water_heated},
             waterHeater()
     end.
 
+coffeeGrinder() ->
+    receive
+        {CID, MID, grind_coffee, Amount} ->
+            Times = Amount*5,
+            case Times of
+                0 -> CID!{unused_product, 23};
+                _ -> procesSimulator(CID, Times, 300, {23,"="})
+            end,
+            MID!{CID, coffee_grinded},
+            coffeeGrinder()
+    end.
+
+milkHeater() ->
+    receive
+        {CID, MID, heat_milk, Amount} ->
+            Times = Amount*5,
+            case Times of
+                0 -> CID!{unused_product, 24};
+                _ -> procesSimulator(CID, Times, 600, {24,"="})
+            end,
+            MID!{CID, milk_heated},
+            milkHeater()
+    end.
+
+mixer() ->
+    receive
+        {CID, start_mixing} ->
+            CID!{drink_is_mixing},
+            timer:sleep(3000),
+            CID!{drink_ready},
+            mixer()
+    end.
+
+monitor(WaterState, MilkState, CoffeeState, CocoaState) ->
+    receive
+        {CID, water_heated} ->
+            NewWaterState = 1,
+            self()!{CID, check_status},
+            monitor(NewWaterState, MilkState, CoffeeState, CocoaState);
+
+        {CID, milk_heated} ->
+            NewMilkState = 1,
+            self()!{CID, check_status},
+            monitor(WaterState, NewMilkState, CoffeeState, CocoaState);
+            
+        {CID, coffee_grinded} ->
+            NewCoffeeState = 1,
+            self()!{CID, check_status},
+            monitor(WaterState, MilkState, NewCoffeeState, CocoaState);
+            
+        {CID, cocoa_poured} ->
+            NewCocoaState = 1,
+            self()!{CID, check_status},
+            monitor(WaterState, MilkState, CoffeeState, NewCocoaState);
+            
+        {CID, check_status} ->
+            case WaterState == 1 of
+                false -> monitor(WaterState, MilkState, CoffeeState, CocoaState);
+                true -> null
+            end,
+
+            case MilkState == 1 of
+                false -> monitor(WaterState, MilkState, CoffeeState, CocoaState);
+                true -> null
+            end,
+
+            case CoffeeState == 1 of
+                false -> monitor(WaterState, MilkState, CoffeeState, CocoaState);
+                true -> null
+            end,
+
+            case CocoaState == 1 of
+                false -> monitor(WaterState, MilkState, CoffeeState, CocoaState);
+                true -> null
+            end,
+
+            CID!{drink_ready_to_mix},
+            monitor(0,0,0,0)
+    end.
+
+
+
 start() ->
     DisplayID = spawn(?MODULE, display, []),
-    WaterHeaterID = spawn(?MODULE, waterHeater, []),
     ProductsID = spawn(?MODULE, products, [productsAtStart()]),
     PaymentID = spawn(?MODULE, paymentTerminal, []),
-    ComputerID = spawn(?MODULE, computer, [DisplayID, ProductsID, PaymentID, WaterHeaterID]),
+    MonitorID = spawn(?MODULE, monitor, [0,0,0,0]),
+
+    WaterHeaterID = spawn(?MODULE, waterHeater, []),
+    MilkHeaterID = spawn(?MODULE, milkHeater, []),
+    CoffeeGrinderID = spawn(?MODULE, coffeeGrinder, []),
+    MixerID = spawn(?MODULE, mixer, []),
+
+    ComputerID = spawn(?MODULE, computer, [DisplayID, ProductsID, PaymentID, MonitorID, {WaterHeaterID, MilkHeaterID, CoffeeGrinderID, MixerID}]),
     ComputerID!{initialize}.
 
 
-% Funkcje pomocnicze
+% Funkcje pomocnicze z panelu
 print({gotoxy,X,Y}) ->
    io:format("\e[~p;~pH",[Y,X]);
-print({printxy,X,Y,Msg}) ->
-   io:format("\e[~p;~pH~p",[Y,X,Msg]);
 print({clear}) ->
    io:format("\ec",[]).
-printxy({X,Y,Msg}) ->
-   io:format("\e[~p;~pH~p~n",[Y,X,Msg]).
+

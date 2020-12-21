@@ -1,0 +1,137 @@
+Nazwa pliku: CoffeeMachine
+
+-funkcja start() 
+	computer -> proces odpowiadajcy za zarządzanie całym automatem
+	display -> proces symulujący wyświetlacz 
+	waterheater -> czajnik
+	milkheater -> podgrzewacz do mleka
+	coffeegrinder -> młynek do kawy
+	monitor -> proces nadzorujący stan przygotowania napoju
+	products -> magazyn z produktami 
+	mixer -> mikser
+	paymentterminal -> proces symulującu urządzenie do płacenia
+
+
+
+Sposób działania:
+1. Zespawnowanie procesów
+2. FLOW
+
+computer (initialize) -> 
+	products (initalize ) ->
+		return  computer(productsok)
+
+computer (products_ok) ->  
+	paymentterminal (initialize) ->
+		return computer (paymentterminalok)
+
+computer (payment_terminal_ok) ->
+	display (display_menu) ->
+		- wyświetlić menu 
+		- pobrać pieniądze
+		- wybrać napój 
+		return computer (money, drink_type)
+
+computer (money, drink_type) ->
+	OPCJONALNIE sprawdzenie czy poprawny drink_type i pieniadze (narazie przyjmujemy że podajemy dobre wartosci)
+	payment_terminal(isEnough, money, drink_type) -> 
+		#jezeli ok then return computer(moneyEnough, money, drink_type)
+		#jeżeli za mało zwróć pieniądze i return computer(moneyNotEnough, money drink_type) 
+	
+computer (moneyEnough, money, drink_type) -> 
+	products(drink_type, money) ->
+		sprawdza czy można zrobić dany produkt
+		# jest ok then return computer(products_enough, drink_type, money) 
+		# nie ma czegoś then return computer(products_lack, money)
+
+computer(moneyNotEnough, money, drink type) -> 
+	payment_terminal(return_money, money) -> 
+		-"Zwracam pieniądze" 
+		return computer(money_returned, money, drink_type) 
+
+computer(money_returned, money, drink_type)	
+	display(command, message)-> 
+		-wyświetlenie komunikatu o niewystarczającej liczbie pieniędzy i że pieniądze zostały zwrócone
+		-odczekanie jakiegoś czasu
+		return display(display_menu) 
+
+computer (products_lack, money) -> 
+	payment_terminal(return_money, money)->
+		-wprintowanie "#zwracam pieniądze#"
+	display (products_lack)-> 
+		-wyświetli komunikat o braku produktów i że pieniądze zostały zwrócone
+		-odczekanie jakiegoś czasu
+		return display(display_menu)
+
+computer (products_enough, drink_type, money) ->
+	payment_terminal (money, drink_type) ->
+		- obsługe:
+			#wydaje reszte "Zwracam xx pln" 
+			return computer(payment_ok, drink_type)
+
+computer (payment_ok, drink_type) -> 
+	display(string, line, "xyz"):
+	-woda 
+	-kawa 
+	-mleko 
+	-mikser 
+	products(get, drink_type) ->
+		-update stanu produktów
+	
+	waterheater(heat_water, amount)
+	milkheater(heat_milk, amount)
+	coffeegrinder(grinde_coffee, amount)
+	
+waterheater(heat_water, amount) ->
+	progresbar(...) (jeśli potrzebny)
+	computer(water_heated)
+
+
+milkheater(heat_milk, amount)->
+	progresbar(...) (jeśli potrzebny)
+	computer(milk_heated)
+
+coffeegrinder(grinde_coffee, amount)
+	progresbar(...) (jeśli potrzebny)
+	computer(coffee_grinded)
+	
+computer (water_heated / milk_heated / coffee_grinded)
+	monitor(water_heated / milk_heated / coffee_grinded)
+
+monitor(water_heated / milk_heated / coffee_grinded) 
+	|poczeka aż wszystko będzie gotowe|
+	mixer(mix)
+		
+mixer(mix)->
+	-miksuje
+	computer(drink_ready)
+
+computer(drink_ready)
+	display(drink_ready)
+	odczekanie ...
+	display(display_menu)
+
+
+NAPOJE:
+	mała czarna kawa
+	-||- z mlekiem
+	duża czarna kawa
+	-||- z mlekiem
+	kakao
+	
+		
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
